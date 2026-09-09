@@ -1,0 +1,8 @@
+.idea/
+.venv/
+__pycache__/
+.pytest_cache/
+reports/
+allure-results/
+config/settings.yaml
+*.log

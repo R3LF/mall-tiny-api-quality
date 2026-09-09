@@ -1,0 +1,25 @@
+# ============================================================
+# 数据层：AUTH-02~05 登录失败矩阵
+# 适用条件：断言同构（HTTP 200 + 业务码 + message + data 为空），
+#           这种"换数据不改断言"的用例才值得数据驱动
+# ============================================================
+- username: "admin"
+  password: "123"
+  code: 500
+  message: "密码不正确"
+  name: 密码错误
+- username: "adm"
+  password: "Qa123456"
+  code: 404
+  message: "用户名或密码错误"
+  name: 用户不存在
+- username: ""
+  password: "123"
+  code: 404
+  message: "username不能为空"
+  name: 用户名为空
+- username: "admin"
+  password: ""
+  code: 404
+  message: "password不能为空"
+  name: 密码为空

@@ -1,0 +1,17 @@
+# ============================================================
+# 数据层：AUTH-06 非法 JSON 请求体
+# 预期：HTTP 400 + Spring 默认错误体（无 code 外壳）
+# 这些 body 用 data= 原样发送，不能走 json= 参数
+# ============================================================
+- body: "not-valid-json"
+  name: 纯文本
+- body: ""
+  name: 空字符串
+- body: '{"username":"admin"'
+  name: 截断JSON
+- body: "{'username':'admin','password':'x'}"
+  name: 单引号JSON
+- body: '{"username": admin, "password": "x"}'
+  name: 值无引号
+- body: "[1,2,3]"
+  name: 合法JSON但类型错

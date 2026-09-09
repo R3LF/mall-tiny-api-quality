@@ -1,0 +1,96 @@
+name: api-test
+
+# 触发：push 到 main / PR / 手动触发
+# 流程：检出测试仓库与被测源码 → 构建 jar → Compose 起被测环境 →
+#       等待就绪 → 跑全部接口用例 → 归档报告
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  api-test:
+    runs-on: ubuntu-latest
+    env:
+      MALL_TINY_SOURCE: ./mall-tiny
+      MYSQL_ROOT_PASSWORD: root
+    steps:
+      - name: 检出测试仓库
+        uses: actions/checkout@v4
+
+      - name: 检出被测源码（固定 commit，保证被测行为可复现）
+        uses: actions/checkout@v4
+        with:
+          repository: macrozheng/mall-tiny
+          ref: a81ec4740a0c7c99a06ebffb43a14168beadffc3
+          path: mall-tiny
+
+      - name: 安装 JDK 8 + Maven（构建被测应用）
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+          cache: maven
+
+      - name: 构建被测应用 jar
+        run: mvn -f mall-tiny/pom.xml -DskipTests package
+
+      - name: 安装 Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: 安装测试依赖
+        run: pip install -e .
+
+      - name: 生成测试配置（CI 环境专属，密码不入仓库）
+        run: |
+          mkdir -p config
+          cat > config/settings.yaml <<EOF
+          base_url: http://localhost:8080
+          accounts:
+            admin:
+              username: admin
+              password: Qa123456
+          database:
+            host: "localhost"
+            port: 3306
+            user: "root"
+            password: "root"
+            database: "mall_tiny"
+          redis:
+            host: "localhost"
+            port: 6379
+            db: 0
+            decode_responses: True
+          EOF
+
+      - name: 启动被测环境（Compose：db + redis + app）
+        run: docker compose up -d --build
+
+      - name: 等待应用就绪（超时输出容器日志）
+        run: |
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              http://localhost:8080/admin/login \
+              -H "Content-Type: application/json" \
+              -d '{"username":"admin","password":"Qa123456"}' || true)
+            if [ "$code" = "200" ]; then echo "应用就绪（第 $i 次探测）"; exit 0; fi
+            echo "等待应用启动 ($i/60)"; sleep 5
+          done
+          echo "应用启动超时，容器日志："
+          docker compose logs --tail 100 app
+          exit 1
+
+      - name: 运行全部接口用例（含 JUnit 与 Allure 原始结果）
+        run: pytest tests/ -v --junitxml=reports/junit.xml --alluredir=reports/allure-results
+
+      - name: 归档测试报告（无论成功失败）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            reports/junit.xml
+            reports/allure-results/
