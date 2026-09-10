@@ -1,0 +1,9 @@
+allure-pytest<3,>=2.16
+jsonschema<5,>=4.26
+locust<3,>=2.46
+pymysql<2,>=1.1
+pytest<10,>=9
+pytest-html<5,>=4
+pyyaml<7,>=6
+redis<9,>=7
+requests<3,>=2.32
