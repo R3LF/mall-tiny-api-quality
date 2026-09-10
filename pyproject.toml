@@ -2,6 +2,11 @@
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
+# 应用型仓库（无可分发的 Python 包）：显式声明空包列表，
+# 避免 setuptools 平面布局自动发现在多个顶层目录时报错
+[tool.setuptools]
+packages = []
+
 [project]
 name = "mall-tiny-api-quality"
 version = "0.1.0"
