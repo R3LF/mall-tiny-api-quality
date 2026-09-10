@@ -6,3 +6,4 @@ reports/
 allure-results/
 config/settings.yaml
 *.log
+*.egg-info/
